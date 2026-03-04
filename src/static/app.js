@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeLoginModal = document.querySelector(".close-login-modal");
   const loginMessage = document.getElementById("login-message");
 
+  // School name constant
+  const SCHOOL_NAME = "Mergington High School";
+
   // Activity categories with corresponding colors
   const activityTypes = {
     sports: { label: "Sports", color: "#e8f5e9", textColor: "#2e7d32" },
@@ -569,6 +572,10 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      <div class="share-section">
+        <button class="share-button" aria-label="Share this activity">📤 Share</button>
+        <div class="share-dropdown hidden"></div>
+      </div>
     `;
 
     // Add click handlers for delete buttons
@@ -586,6 +593,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handler for share button
+    const shareButton = activityCard.querySelector(".share-button");
+    shareButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const shareUrl = `${window.location.origin}${window.location.pathname}?activity=${encodeURIComponent(name)}`;
+      const shareTitle = `${name} - ${SCHOOL_NAME}`;
+      const shareText = `Check out "${name}" at ${SCHOOL_NAME}! ${details.description}`;
+
+      if (navigator.share) {
+        navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(() => {});
+        return;
+      }
+
+      const dropdown = activityCard.querySelector(".share-dropdown");
+      toggleShareDropdown(dropdown, name, shareText, shareUrl);
+    });
 
     activitiesList.appendChild(activityCard);
   }
@@ -798,6 +822,51 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
   }
+
+  // Toggle share dropdown for an activity card
+  function toggleShareDropdown(dropdown, activityName, shareText, shareUrl) {
+    // Close any other open dropdowns first
+    document.querySelectorAll(".share-dropdown:not(.hidden)").forEach((d) => {
+      if (d !== dropdown) d.classList.add("hidden");
+    });
+
+    if (!dropdown.classList.contains("hidden")) {
+      dropdown.classList.add("hidden");
+      return;
+    }
+
+    dropdown.innerHTML = `
+      <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}"
+         target="_blank" rel="noopener noreferrer" class="share-option">🐦 Twitter/X</a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}"
+         target="_blank" rel="noopener noreferrer" class="share-option">👍 Facebook</a>
+      <a href="mailto:?subject=${encodeURIComponent("Check out: " + activityName)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}"
+         class="share-option">📧 Email</a>
+      <button class="share-option copy-link-btn">📋 Copy Link</button>
+    `;
+    dropdown.classList.remove("hidden");
+
+    const copyBtn = dropdown.querySelector(".copy-link-btn");
+    copyBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        copyBtn.textContent = "✅ Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = "📋 Copy Link";
+        }, 2000);
+      } catch {
+        showMessage("Could not copy to clipboard.", "info");
+      }
+    });
+  }
+
+  // Close share dropdowns when clicking outside
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".share-dropdown:not(.hidden)").forEach((d) => {
+      d.classList.add("hidden");
+    });
+  });
 
   // Show message function
   function showMessage(text, type) {
